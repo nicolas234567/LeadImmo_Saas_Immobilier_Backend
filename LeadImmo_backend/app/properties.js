@@ -41,11 +41,11 @@ router.get('/:id', auth, async (req, res) => {
   }
 })
 
-router.get('/:id/image', auth, async (req, res) => {
+router.get('/:id/image', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT image_data, image_mimetype FROM properties WHERE id = $1 AND agency_id = $2',
-      [req.params.id, req.user.agency_id]
+      'SELECT image_data, image_mimetype FROM properties WHERE id = $1',
+      [req.params.id]
     )
     if (result.rows.length === 0 || !result.rows[0].image_data) {
       return res.status(404).json({ error: 'Image introuvable' })

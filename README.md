@@ -244,4 +244,4 @@ Supprime un lead.
 3. Injecte `req.user = { user_id, agency_id }` pour les handlers suivants
 4. Retourne **401** si token absent, **403** si token invalide ou expiré
 
-L'isolation des données par agence est assurée par le filtre `agency_id = req.user.agency_id` dans chaque requête SQL.
+Chaque requête SQL filtre sur `agency_id = req.user.agency_id` — un utilisateur ne peut jamais accéder aux données d'une autre agence.

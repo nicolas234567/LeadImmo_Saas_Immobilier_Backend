@@ -13,7 +13,8 @@ router.post('/createAccount', async (req, res) => {
       [email, hash]
     )
 
-    res.status(201).json(result.rows[0])
+    const { password: _pw, ...user } = result.rows[0]
+    res.status(201).json(user)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
