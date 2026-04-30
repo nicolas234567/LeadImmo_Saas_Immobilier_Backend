@@ -8,6 +8,7 @@ ios/
 .env
 .env.local
 .env.production
+.leadimmo.backup
 
 .DS_Store
 Thumbs.db
