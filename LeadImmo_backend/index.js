@@ -14,6 +14,7 @@ app.use(express.json())
 
 app.use('/auth', require('./auth/login'))
 app.use('/auth', require('./auth/createAccount'))
+app.use('/auth', require('./auth/createAccountAgency'))
 app.use('/properties', require('./app/properties'))
 app.use('/leads', require('./app/leads'))
 

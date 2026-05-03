@@ -1,16 +1,18 @@
 const router = require('express').Router()
 const pool = require('../db')
 const bcrypt = require('bcryptjs')
+const auth = require('../middleware/auth')
 
-router.post('/createAccount', async (req, res) => {
+router.post('/createAccount', auth, async (req, res) => {
   const { email, password } = req.body
+  const agency_id = req.user.agency_id
 
   try {
     const hash = await bcrypt.hash(password, 10)
 
     const result = await pool.query(
-      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *',
-      [email, hash]
+      'INSERT INTO users (email, password, agency_id) VALUES ($1, $2, $3) RETURNING *',
+      [email, hash, agency_id]
     )
 
     const { password: _pw, ...user } = result.rows[0]
