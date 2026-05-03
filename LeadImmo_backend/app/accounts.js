@@ -32,6 +32,14 @@ router.patch('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   try {
+    const count = await pool.query(
+      'SELECT COUNT(*) FROM users WHERE agency_id = $1',
+      [req.user.agency_id]
+    )
+    if (parseInt(count.rows[0].count) <= 1) {
+      return res.status(400).json({ error: "L'agence doit avoir au minimum un compte" })
+    }
+
     const result = await pool.query(
       'DELETE FROM users WHERE id = $1 AND agency_id = $2 RETURNING id',
       [req.params.id, req.user.agency_id]
