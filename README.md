@@ -1,19 +1,18 @@
 # LeadImmo API
 
-API REST backend de l'application [LeadImmo](https://github.com/nicolas234567/LeadImmo_Saas_Immobilier), développée avec Node.js, Express et PostgreSQL.
+Backend REST de l'application [LeadImmo](https://github.com/nicolas234567/LeadImmo_Saas_Immobilier) — Node.js, Express 5, PostgreSQL.
 
 ---
 
-## Stack technique
+## Stack
 
-| Couche | Technologie |
+| | |
 |---|---|
 | Runtime | Node.js |
 | Framework | Express 5 |
-| Base de données | PostgreSQL (driver `pg`) |
-| Authentification | JWT (`jsonwebtoken`) |
-| Hash mot de passe | bcryptjs |
-| Upload fichiers | multer (stockage en mémoire → colonne bytea) |
+| Base de données | PostgreSQL (`pg`) |
+| Auth | JWT (`jsonwebtoken`) + bcryptjs |
+| Upload | multer → stockage binaire en colonne `bytea` |
 | Config | dotenv |
 
 ## Démarrage
@@ -21,14 +20,10 @@ API REST backend de l'application [LeadImmo](https://github.com/nicolas234567/Le
 ```bash
 cd LeadImmo_backend
 npm install
-node index.js       # ou : npx nodemon index.js (rechargement auto)
+node index.js          # ou npx nodemon index.js
 ```
 
-Le serveur écoute sur le port **3000** par défaut.
-
-## Variables d'environnement
-
-Créer un fichier `.env` dans `LeadImmo_backend/` :
+Créer un `.env` dans `LeadImmo_backend/` :
 
 ```env
 DB_HOST=localhost
@@ -39,209 +34,140 @@ DB_PASSWORD=<mot de passe>
 JWT_SECRET=<clé secrète longue et aléatoire>
 ```
 
-## Structure du projet
+## Structure
 
 ```
 LeadImmo_backend/
-├── index.js            # Point d'entrée — monte les routes
-├── db.js               # Pool de connexion PostgreSQL
+├── index.js                   # Point d'entrée
+├── db.js                      # Pool PostgreSQL
 ├── auth/
-│   ├── login.js        # POST /auth/login
-│   └── createAccount.js# POST /auth/createAccount
+│   ├── login.js               # POST /auth/login
+│   ├── createAccount.js       # POST /auth/createAccount (auth requise)
+│   └── createAccountAgency.js # POST /auth/createAccountAgency (public)
 ├── app/
-│   ├── leads.js        # CRUD /leads
-│   └── properties.js   # CRUD /properties (+ upload image)
+│   ├── accounts.js            # CRUD /accounts
+│   ├── leads.js               # CRUD /leads
+│   └── properties.js          # CRUD /properties
 └── middleware/
-    └── auth.js         # Vérification JWT (Bearer token)
+    └── auth.js                # Vérification JWT
 ```
 
-## Schéma de base de données
+## Base de données
 
-### Table `users`
-
-| Colonne | Type | Description |
+### `agencies`
+| Colonne | Type | |
 |---|---|---|
-| id | SERIAL PK | Identifiant |
-| email | TEXT UNIQUE | Adresse email |
+| id | SERIAL PK | |
+| name | TEXT | Nom de l'agence |
+| email | TEXT | |
+
+### `users`
+| Colonne | Type | |
+|---|---|---|
+| id | SERIAL PK | |
+| email | TEXT UNIQUE | |
 | password | TEXT | Hash bcrypt |
-| agency_id | INTEGER | Agence associée |
+| role | TEXT | |
+| agency_id | INTEGER FK | |
+| created_at | TIMESTAMP | |
 
-### Table `properties`
-
-| Colonne | Type | Description |
+### `properties`
+| Colonne | Type | |
 |---|---|---|
-| id | SERIAL PK | Identifiant |
-| agency_id | INTEGER | Agence propriétaire |
-| title | TEXT | Titre du bien |
-| address | TEXT | Adresse |
-| price | NUMERIC | Prix |
+| id | SERIAL PK | |
+| agency_id | INTEGER | |
+| title | TEXT | |
+| address | TEXT | |
+| price | NUMERIC | |
 | status | TEXT | `available` \| `under_offer` \| `sold` |
-| image_data | BYTEA | Image binaire (optionnelle) |
-| image_mimetype | TEXT | Type MIME de l'image |
-| created_at | TIMESTAMP | Date de création |
+| image_data | BYTEA | Optionnelle |
+| image_mimetype | TEXT | |
+| created_at | TIMESTAMP | |
 
-### Table `leads`
-
-| Colonne | Type | Description |
+### `leads`
+| Colonne | Type | |
 |---|---|---|
-| id | SERIAL PK | Identifiant |
-| agency_id | INTEGER | Agence propriétaire |
-| property_id | INTEGER FK | Bien associé (optionnel) |
-| name | TEXT | Nom du lead |
-| email | TEXT | Email |
-| phone | TEXT | Téléphone |
+| id | SERIAL PK | |
+| agency_id | INTEGER | |
+| property_id | INTEGER FK | Optionnel |
+| name | TEXT | |
+| email | TEXT | |
+| phone | TEXT | |
 | status | TEXT | `new` \| `contacted` \| `visiting` \| `offer` |
-| budget | NUMERIC | Budget estimé (optionnel) |
-| notes | TEXT | Notes libres (optionnel) |
-| created_at | TIMESTAMP | Date de création |
+| budget | NUMERIC | Optionnel |
+| notes | TEXT | Optionnel |
+| created_at | TIMESTAMP | |
 
 ---
 
-## Référence des endpoints
+## Endpoints
 
-Toutes les routes sauf `/auth/*` nécessitent un header :
+Toutes les routes sauf `/auth/login` et `/auth/createAccountAgency` nécessitent :
 ```
 Authorization: Bearer <token>
 ```
 
 ### Authentification
 
-#### `POST /auth/createAccount`
-Crée un compte utilisateur.
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/createAccountAgency` | Non | Crée une agence + premier compte (transaction) |
+| POST | `/auth/createAccount` | Oui | Ajoute un compte dans l'agence connectée |
+| POST | `/auth/login` | Non | Retourne un JWT (durée 1 h) |
 
-**Body JSON :**
+**`POST /auth/createAccountAgency`**
 ```json
-{ "email": "user@example.com", "password": "motdepasse" }
-```
-**Réponse 201 :** objet utilisateur créé (sans mot de passe en clair).
-
----
-
-#### `POST /auth/login`
-Connecte un utilisateur et retourne un token JWT (durée : 1 h).
-
-**Body JSON :**
-```json
-{ "email": "user@example.com", "password": "motdepasse" }
-```
-**Réponse 200 :**
-```json
-{ "token": "<jwt>" }
+{ "email": "admin@agence.com", "password": "...", "agency_name": "Mon Agence" }
 ```
 
----
+**`POST /auth/createAccount`**
+```json
+{ "email": "user@example.com", "password": "..." }
+```
 
-### Biens immobiliers (`/properties`)
-
-#### `GET /properties`
-Retourne la liste des biens de l'agence connectée.
-
-**Réponse 200 :** tableau de biens (sans `image_data`).
+**`POST /auth/login`** → `{ "token": "<jwt>" }`
 
 ---
 
-#### `GET /properties/:id`
-Retourne un bien par son identifiant.
+### Comptes (`/accounts`)
 
-**Réponse 200 :** objet bien. **404** si introuvable.
-
----
-
-#### `GET /properties/:id/image`
-Retourne l'image binaire du bien.
-
-**Réponse 200 :** contenu binaire avec header `Content-Type` correspondant. **404** si pas d'image.
-
----
-
-#### `POST /properties`
-Crée un nouveau bien. Supporte l'upload d'image via `multipart/form-data`.
-
-**Body (`multipart/form-data` ou JSON) :**
-| Champ | Type | Obligatoire |
+| Méthode | Route | Description |
 |---|---|---|
-| title | string | oui |
-| address | string | oui |
-| price | number | oui |
-| status | string | non (défaut : `available`) |
-| image | fichier image | non (max 5 Mo) |
-
-**Réponse 201 :** objet bien créé.
+| GET | `/accounts` | Liste les comptes de l'agence |
+| PATCH | `/accounts/:id` | Modifie l'email d'un compte |
+| DELETE | `/accounts/:id` | Supprime un compte (minimum 1 requis) |
 
 ---
 
-#### `PATCH /properties/:id`
-Met à jour un bien existant. Si une image est fournie, elle remplace l'ancienne.
+### Biens (`/properties`)
 
-**Body :** mêmes champs que `POST /properties`.
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/properties` | Liste les biens (sans image_data) |
+| GET | `/properties/:id` | Détail d'un bien |
+| GET | `/properties/:id/image` | Image binaire du bien |
+| POST | `/properties` | Crée un bien (multipart/form-data) |
+| PATCH | `/properties/:id` | Met à jour un bien |
+| DELETE | `/properties/:id` | Supprime un bien |
 
-**Réponse 200 :** objet bien mis à jour. **404** si introuvable.
-
----
-
-#### `DELETE /properties/:id`
-Supprime un bien.
-
-**Réponse 200 :** `{ "message": "Bien supprimé" }`. **404** si introuvable.
+Champs pour `POST` / `PATCH` : `title`, `address`, `price`, `status` (défaut : `available`), `image` (fichier, max 5 Mo).
 
 ---
 
 ### Leads (`/leads`)
 
-#### `GET /leads`
-Retourne la liste des leads de l'agence connectée, avec le titre du bien associé.
-
-**Réponse 200 :** tableau de leads.
-
----
-
-#### `GET /leads/:id`
-Retourne un lead par son identifiant.
-
-**Réponse 200 :** objet lead. **404** si introuvable.
-
----
-
-#### `POST /leads`
-Crée un nouveau lead.
-
-**Body JSON :**
-| Champ | Type | Obligatoire |
+| Méthode | Route | Description |
 |---|---|---|
-| name | string | oui |
-| email | string | oui |
-| phone | string | oui |
-| property_id | string\|null | non |
-| status | string | non (défaut : `new`) |
-| budget | number | non |
-| notes | string | non |
+| GET | `/leads` | Liste les leads avec le titre du bien associé |
+| GET | `/leads/:id` | Détail d'un lead |
+| POST | `/leads` | Crée un lead |
+| PATCH | `/leads/:id` | Met à jour un lead |
+| DELETE | `/leads/:id` | Supprime un lead |
 
-**Réponse 201 :** objet lead créé.
+Champs pour `POST` / `PATCH` : `name`, `email`, `phone` (requis) — `property_id`, `status`, `budget`, `notes` (optionnels).
 
 ---
 
-#### `PATCH /leads/:id`
-Met à jour un lead existant.
+## Authentification & isolation
 
-**Body JSON :** mêmes champs que `POST /leads`.
-
-**Réponse 200 :** objet lead mis à jour. **404** si introuvable.
-
----
-
-#### `DELETE /leads/:id`
-Supprime un lead.
-
-**Réponse 200 :** `{ "message": "Lead supprimé" }`. **404** si introuvable.
-
----
-
-## Middleware d'authentification
-
-`middleware/auth.js` est appliqué sur toutes les routes `/leads` et `/properties`. Il :
-1. Lit le header `Authorization: Bearer <token>`
-2. Vérifie le JWT avec `JWT_SECRET`
-3. Injecte `req.user = { user_id, agency_id }` pour les handlers suivants
-4. Retourne **401** si token absent, **403** si token invalide ou expiré
-
-Chaque requête SQL filtre sur `agency_id = req.user.agency_id` — un utilisateur ne peut jamais accéder aux données d'une autre agence.
+Le middleware JWT injecte `req.user = { user_id, agency_id }` sur toutes les routes protégées. Chaque requête SQL filtre sur `agency_id` — un utilisateur ne peut jamais voir les données d'une autre agence.
